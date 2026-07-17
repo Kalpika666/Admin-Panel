@@ -3,133 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetroX - Admin Panel</title>
+    <title>NetroX Admin</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        body { font-family: 'Inter', sans-serif; background: #050510; color: white; padding: 20px; }
-        .container { max-width: 800px; margin: auto; }
-        .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        input, textarea { width: 100%; padding: 10px; margin: 10px 0; background: #111; border: 1px solid #333; color: white; border-radius: 8px; }
-        button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .btn-add { background: #00d2ff; color: black; }
-        .btn-del { background: #ff3b30; color: white; padding: 5px 10px; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #222; }
-        .header { display: flex; justify-content: space-between; align-items: center; }
+        body { font-family: sans-serif; background: #0a0a0a; color: #fff; padding: 20px; }
+        .card { background: #1a1a1a; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0; background: #000; border: 1px solid #444; color: #fff; border-radius: 8px; box-sizing: border-box; }
+        button { background: #00d2ff; color: #000; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
+        button:active { transform: scale(0.98); }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; font-size: 14px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #333; }
+        .btn-del { background: #ff3b30; color: #fff; padding: 5px 10px; width: auto; font-size: 12px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>NetroX Admin Panel</h1>
-            <input type="password" id="adminKey" placeholder="Admin Key" style="width: 200px;">
+    <div style="max-width: 600px; margin: auto;">
+        <h2><i class="fas fa-user-shield"></i> NetroX Admin</h2>
+        
+        <input type="password" id="adminKey" placeholder="Enter Admin Key First">
+        <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+
+        <div class="card">
+            <h3>Add New Client</h3>
+            <input type="text" id="u" placeholder="Username">
+            <input type="text" id="p" placeholder="Password">
+            <input type="text" id="n" placeholder="Full Name">
+            <button onclick="api('add-client', {username:u.value, password:p.value, full_name:n.value})">CREATE CLIENT</button>
         </div>
 
-        <!-- Add New Client -->
         <div class="card">
-            <h3><i class="fas fa-user-plus"></i> Add New Client</h3>
-            <input type="text" id="newUsername" placeholder="Username (Unique)">
-            <input type="text" id="newPassword" placeholder="Password">
-            <input type="text" id="newName" placeholder="Full Name">
-            <button class="btn-add" onclick="addClient()">Add Client</button>
+            <h3>Link VPN to Client</h3>
+            <input type="text" id="tu" placeholder="Client Username">
+            <input type="text" id="vl" placeholder="Label (Dialog Zoom)">
+            <input type="text" id="ve" placeholder="VPN Email ID">
+            <textarea id="vc" placeholder="Config Link"></textarea>
+            <button onclick="api('add-vpn', {username:tu.value, label:vl.value, vpn_email:ve.value, vpn_config:vc.value})">LINK VPN</button>
         </div>
 
-        <!-- Add VPN to Client -->
         <div class="card">
-            <h3><i class="fas fa-shield-alt"></i> Link VPN to Client</h3>
-            <input type="text" id="targetUser" placeholder="Client Username (e.g. Kalpika)">
-            <input type="text" id="vpnLabel" placeholder="Label (e.g. Dialog Zoom)">
-            <input type="text" id="vpnEmail" placeholder="X-UI Email ID">
-            <textarea id="vpnConfig" placeholder="V2Ray Config Link (vless://...)"></textarea>
-            <button class="btn-add" onclick="addVpn()">Link VPN</button>
-        </div>
-
-        <!-- Data List -->
-        <div class="card">
-            <h3><i class="fas fa-list"></i> Active VPNs</h3>
-            <button onclick="fetchData()" style="background: #333; color: white;">Refresh List</button>
-            <table id="vpnTable">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Label</th>
-                        <th>VPN Email</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
+            <button style="background:#333; color:#fff;" onclick="loadList()">REFRESH VPN LIST</button>
+            <table id="list">
+                <thead><tr><th>User</th><th>VPN Email</th><th>Action</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
     </div>
 
     <script>
-        const workerUrl = "https://soft-water-567c.kalpikachampathi.workers.dev"; // ඔබේ Worker URL එක
+        const workerUrl = "https://soft-water-567c.kalpikachampathi.workers.dev"; // ඔබේ URL එක
 
-        async function addClient() {
-            const data = {
-                username: document.getElementById('newUsername').value,
-                password: document.getElementById('newPassword').value,
-                full_name: document.getElementById('newName').value
-            };
-            const res = await fetch(`${workerUrl}/admin/add-client`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': document.getElementById('adminKey').value
-                },
-                body: JSON.stringify(data)
-            });
-            if(res.ok) alert("Client Added!"); else alert("Failed! Check Admin Key");
+        async function api(path, data) {
+            const key = document.getElementById('adminKey').value;
+            if(!key) return alert("Please enter Admin Key!");
+
+            try {
+                const res = await fetch(`${workerUrl}/admin/${path}`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': key
+                    },
+                    body: JSON.stringify(data)
+                });
+                if(res.ok) {
+                    alert("Success!");
+                    loadList();
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + (err.error || "Failed"));
+                }
+            } catch(e) {
+                alert("Network Error: " + e.message);
+            }
         }
 
-        async function addVpn() {
-            const data = {
-                username: document.getElementById('targetUser').value,
-                label: document.getElementById('vpnLabel').value,
-                vpn_email: document.getElementById('vpnEmail').value,
-                vpn_config: document.getElementById('vpnConfig').value
-            };
-            const res = await fetch(`${workerUrl}/admin/add-vpn`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': document.getElementById('adminKey').value
-                },
-                body: JSON.stringify(data)
-            });
-            if(res.ok) alert("VPN Linked!"); else alert("Failed!");
-        }
-
-        async function fetchData() {
+        async function loadList() {
+            const key = document.getElementById('adminKey').value;
+            if(!key) return alert("Enter Admin Key to load list!");
+            
             const res = await fetch(`${workerUrl}/admin/list`, {
-                headers: { 'Authorization': document.getElementById('adminKey').value }
+                headers: { 'Authorization': key }
             });
-            const data = await res.json();
-            const tbody = document.querySelector("#vpnTable tbody");
-            tbody.innerHTML = "";
-            data.vpns.forEach(vpn => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${vpn.username}</td>
-                        <td>${vpn.label}</td>
-                        <td>${vpn.vpn_email}</td>
-                        <td><button class="btn-del" onclick="deleteVpn(${vpn.id})">Delete</button></td>
-                    </tr>
-                `;
-            });
-        }
-
-        async function deleteVpn(id) {
-            if(!confirm("Are you sure?")) return;
-            const res = await fetch(`${workerUrl}/admin/delete-vpn`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': document.getElementById('adminKey').value
-                },
-                body: JSON.stringify({ id })
-            });
-            fetchData();
+            if(res.ok) {
+                const data = await res.json();
+                const tbody = document.querySelector("#list tbody");
+                tbody.innerHTML = "";
+                data.vpns.forEach(v => {
+                    tbody.innerHTML += `<tr><td>${v.username}</td><td>${v.vpn_email}</td><td><button class="btn-del" onclick="api('delete-vpn', {id:${v.id}})">DEL</button></td></tr>`;
+                });
+            } else {
+                alert("Could not load list. Check Key.");
+            }
         }
     </script>
 </body>
