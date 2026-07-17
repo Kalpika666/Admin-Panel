@@ -53,17 +53,23 @@
         const workerUrl = "https://adminpanel.kalpikachampathi.workers.dev"; // ඔබේ URL එක
 
         async function api(path, data) {
-            const key = document.getElementById('adminKey').value;
-            if(!key) return alert("Please enter Admin Key!");
+    const key = document.getElementById('adminKey').value;
+    if(!key) return alert("Please enter Admin Key!");
 
-            try {
-                const res = await fetch(`${workerUrl}/admin/${path}`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': key
-                    },
-                    body: JSON.stringify(data)
+    // පහත පේළිය මම වෙනස් කළා (URL එක නිවැරදිව හැදෙන්න)
+    const fullPath = path.startsWith('admin/') ? path : `admin/${path}`;
+
+    try {
+        const res = await fetch(`${workerUrl}/${fullPath}`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': key
+            },
+            body: JSON.stringify(data)
+        });
+        
+        // ... ඉතිරි කොටස කලින් තිබූ පරිදිම තබන්න
                 });
                 if(res.ok) {
                     alert("Success!");
